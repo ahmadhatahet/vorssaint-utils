@@ -41,8 +41,12 @@ struct FeatureHubSettings: View {
     }
 
     private var content: some View {
+        // The lazy stack has to be the scroll view's own content (issue
+        // #2270). Nested in a plain stack, it resized that stack each time a
+        // card came into view: scrolling stalled for up to a second, and the
+        // layout could keep redoing itself until Settings froze.
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            LazyVStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(hub.pageTitle).font(.title2.bold())
                     Text(tab == .features ? hub.intro : hub.permissionsIntro)
@@ -65,10 +69,8 @@ struct FeatureHubSettings: View {
                     summaryCard
                     dynamicIslandCard
                     presetsCard
-                    LazyVStack(spacing: 20) {
-                        ForEach(FeatureGroup.allCases.filter { $0 != .dynamicIsland }, id: \.self) { group in
-                            groupCard(group)
-                        }
+                    ForEach(FeatureGroup.allCases.filter { $0 != .dynamicIsland }, id: \.self) { group in
+                        groupCard(group)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(hub.footerNote)
@@ -909,6 +911,7 @@ extension AppFeature {
         case .scrollZoom: return s.zoomSection
         case .focusFollowsMouse: return s.focusFollowsMouseName
         case .smoothScroll: return s.smoothScrollName
+        case .linearScroll: return s.linearScrollName
         case .mouseAcceleration: return s.mouseAccelerationName
         case .mouseNavigation: return hub.titleMouseNavigation
         case .mouseButtonShortcuts: return FeatureStrings.mouseButtons(L10n.shared.language).pageTitle
@@ -992,6 +995,7 @@ extension AppFeature {
             return [s.verticalZoom, s.horizontalZoom, s.pinchZoom].joined(separator: ", ")
         case .focusFollowsMouse: return L10n.shared.s.focusFollowsMouseCaption
         case .smoothScroll: return hub.descSmoothScroll
+        case .linearScroll: return L10n.shared.s.linearScrollCaption
         case .mouseAcceleration: return L10n.shared.s.mouseAccelerationCaption
         case .mouseNavigation: return hub.descMouseNavigation
         case .mouseButtonShortcuts: return FeatureStrings.mouseButtons(L10n.shared.language).hubDescription

@@ -28,6 +28,7 @@ enum SettingsSectionAnchor: String, CaseIterable, Hashable {
     case scrollZoom
     case focusFollowsMouse
     case smoothScroll
+    case linearScroll
     case mouseAcceleration
     case mouseNavigation
     case mouseButtonShortcuts
@@ -62,7 +63,8 @@ enum SettingsSectionAnchor: String, CaseIterable, Hashable {
              .soundOutputSwitcher:
             return .general
         case .keepAwake, .brightness, .extraBrightness, .bluetoothSleep: return .energy
-        case .scrollDirection, .scrollZoom, .focusFollowsMouse, .smoothScroll, .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts,
+        case .scrollDirection, .scrollZoom, .focusFollowsMouse, .smoothScroll, .linearScroll,
+             .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts,
              .middleClick, .mouseClickDebounce:
             return .mouse
         case .switcher: return .switcher
@@ -271,6 +273,8 @@ extension AppFeature {
             return FeatureSettingsDestination(.mouse, sectionAnchor: .focusFollowsMouse)
         case .smoothScroll:
             return FeatureSettingsDestination(.mouse, sectionAnchor: .smoothScroll)
+        case .linearScroll:
+            return FeatureSettingsDestination(.mouse, sectionAnchor: .linearScroll)
         case .mouseAcceleration:
             return FeatureSettingsDestination(.mouse, sectionAnchor: .mouseAcceleration)
         case .mouseNavigation:
@@ -370,7 +374,8 @@ enum FeatureVisibilitySupport {
         switch page {
         case .energy: return [.keepAwake, .brightness, .extraBrightness, .bluetoothSleep]
         case .monitor: return monitorFeatures
-        case .mouse: return [.scrollInverter, .scrollHorizontal, .scrollZoom, .focusFollowsMouse, .smoothScroll, .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts,
+        case .mouse: return [.scrollInverter, .scrollHorizontal, .scrollZoom, .focusFollowsMouse,
+                             .smoothScroll, .linearScroll, .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts,
                              .middleClick, .mouseClickDebounce]
         case .switcher: return [.switcher]
         case .dock: return [.dockPreview, .dockClick]
