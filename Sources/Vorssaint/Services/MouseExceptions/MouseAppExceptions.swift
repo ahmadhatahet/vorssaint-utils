@@ -50,7 +50,6 @@ final class MouseAppExceptions: ObservableObject {
     /// from (nil when the pointer was over nothing), where the pointer was and
     /// when.
     private var cachedIdentity: String?
-    private var cachedProcessID: pid_t?
     private var cachedRegion: CGRect?
     private var cachedPoint: CGPoint = .zero
     private var cachedAt: TimeInterval = -1
@@ -124,7 +123,7 @@ final class MouseAppExceptions: ObservableObject {
            sources.contains(pid) {
             return true
         }
-        let answer = pointerTarget(at: point)
+        let answer = pointerIdentity(at: point)
         // An app cannot be told apart from a listed one while it is unknown,
         // and a list exists to keep hands off, so hands stay off.
         guard answer.known else { return true }
@@ -145,7 +144,7 @@ final class MouseAppExceptions: ObservableObject {
            sources.contains(pid) {
             return true
         }
-        let answer = pointerTarget(at: point)
+        let answer = pointerIdentity(at: point)
         guard answer.known else { return true }
         if MouseAppExceptionSupport.isExcepted(answer.identity, exceptions: exceptions) {
             return true
@@ -239,19 +238,10 @@ final class MouseAppExceptions: ObservableObject {
 
     // MARK: - Resolving
 
-    /// The process that owns the window under the pointer. A pointer-thread
-    /// miss is left alone while a main-thread refresh fills the cache, rather
-    /// than sending a keyboard shortcut to an unrelated focused app.
-    func pointerTargetProcessID(at point: CGPoint) -> pid_t? {
-        let answer = pointerTarget(at: point, resolvingWithoutExceptions: true)
-        return answer.known ? answer.processID : nil
-    }
-
     /// What the app that owns the window under the pointer answers to, falling
     /// back to the app in front when the pointer is over none. `known` is false
     /// only on the pointer thread, which never waits for the main one.
-    private func pointerTarget(at point: CGPoint,
-                               resolvingWithoutExceptions: Bool = false) -> (known: Bool, identity: String?, processID: pid_t?) {
+    private func pointerIdentity(at point: CGPoint) -> (known: Bool, identity: String?) {
         let now = uptime()
         // The pointer thread must return even while the main thread is busy.
         // An answer that aged out still names the window it came from, so the
@@ -259,8 +249,8 @@ final class MouseAppExceptions: ObservableObject {
         // belongs to another window and is no answer at all.
         let isMainThread = Thread.isMainThread
         var needsRefresh = false
-        let answer = lock.withLock { () -> (settled: Bool, known: Bool, identity: String?, processID: pid_t?) in
-            guard !allEmpty || resolvingWithoutExceptions else { return (true, true, nil, nil) }
+        let answer = lock.withLock { () -> (settled: Bool, known: Bool, identity: String?) in
+            guard !allEmpty else { return (true, true, nil) }
             guard MouseAppExceptionSupport.cacheHolds(region: cachedRegion,
                                                       resolvedPoint: cachedPoint,
                                                       resolvedAt: cachedAt,
@@ -271,21 +261,20 @@ final class MouseAppExceptions: ObservableObject {
                     if needsRefresh { pointerRefreshScheduled = true }
                     let sameWindow = MouseAppExceptionSupport.cacheNamesWindow(region: cachedRegion,
                                                                               point: point)
-                    return (true, sameWindow, sameWindow ? cachedIdentity : nil,
-                            sameWindow ? cachedProcessID : nil)
+                    return (true, sameWindow, sameWindow ? cachedIdentity : nil)
                 }
-                return (false, true, nil, nil)
+                return (false, true, nil)
             }
-            return (true, true, cachedIdentity, cachedProcessID)
+            return (true, true, cachedIdentity)
         }
         if needsRefresh {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 defer { self.lock.withLock { self.pointerRefreshScheduled = false } }
-                _ = self.pointerTarget(at: point, resolvingWithoutExceptions: resolvingWithoutExceptions)
+                _ = self.pointerIdentity(at: point)
             }
         }
-        if answer.settled { return (answer.known, answer.identity, answer.processID) }
+        if answer.settled { return (answer.known, answer.identity) }
 
         let window = MouseAppExceptionSupport.pointerWindow(in: WindowServerSupport.onScreenWindows(),
                                                             at: point,
@@ -293,15 +282,13 @@ final class MouseAppExceptions: ObservableObject {
         let app = window.map { NSRunningApplication(processIdentifier: $0.processID) }
             ?? NSWorkspace.shared.frontmostApplication
         let identity = Self.identity(for: app)
-        let processID = window?.processID ?? app?.processIdentifier
         lock.withLock {
             cachedIdentity = identity
-            cachedProcessID = processID
             cachedRegion = window?.frame
             cachedPoint = point
             cachedAt = now
         }
-        return (true, identity, processID)
+        return (true, identity)
     }
 
     /// A program with no bundle identifier answers to the file being run
@@ -316,7 +303,6 @@ final class MouseAppExceptions: ObservableObject {
     private func invalidateCache() {
         lock.withLock {
             cachedIdentity = nil
-            cachedProcessID = nil
             cachedRegion = nil
             cachedAt = -1
         }
