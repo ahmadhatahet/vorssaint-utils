@@ -558,6 +558,9 @@ enum FeatureCatalogTests {
         suite.expect(runtimeSource.contains(
             "setAvailable(AppFeature.allCases, available, enablingFirstInstalls: false)"),
                "install all makes features available without switching on their behavior")
+        suite.expect(runtimeSource.contains(
+            ".scrollZoom: { ScrollInverter.shared.syncWithPreferences() }"),
+               "installing, relaunching, or removing Zoom re-syncs the shared scroll tap")
 
         suite.expect(AppFeature.availabilityDefaults.count == AppFeature.allCases.count
                 && (AppFeature.availabilityDefaults[AppFeature.fanControl.availabilityKey] as? Bool) == false
@@ -1200,6 +1203,10 @@ enum FeatureCatalogTests {
         suite.expect(activeSet(.accessibility, on: [DefaultsKey.scrollInverterHorizontalEnabled])
                 .contains(.scrollInverter),
                "horizontal-only inversion counts as using accessibility")
+        suite.expect(activeSet(.accessibility, available: [.scrollZoom], on: [DefaultsKey.verticalZoomEnabled])
+                == [.scrollZoom]
+                && activeSet(.accessibility, available: [], on: [DefaultsKey.verticalZoomEnabled]).isEmpty,
+               "Zoom alone owns accessibility only while installed")
         suite.expect(AppFeature.scrollInverter.enabledKeys == [DefaultsKey.scrollInverterEnabled,
                                                            DefaultsKey.scrollInverterHorizontalEnabled],
                "the inversion feature tracks only its own axes")
