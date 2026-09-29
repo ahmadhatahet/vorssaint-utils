@@ -2055,6 +2055,8 @@ enum Defaults {
             defaults.set(defaults.string(forKey: DefaultsKey.horizontalPinchZoomModifier),
                          forKey: DefaultsKey.pinchZoomModifier)
         }
+    }
+
     /// Linear scrolling reached development builds installed, before new
     /// features became opt-in. Whoever switched it on keeps it installed.
     static func migrateLinearScrollAvailability(in defaults: UserDefaults) {

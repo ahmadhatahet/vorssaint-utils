@@ -269,10 +269,10 @@ final class SmoothScrollService: ObservableObject {
             at: event.location,
             sourceProcessID: sourceProcessID
         )
-        if !scrollTargetExcluded,
-           ScrollInverter.shared.consumeZoom(event, direction: direction) {
+        if !scrollTargetExcluded, direction.zoom.action(for: event) != nil {
             stopGlide()
-            return nil
+            return ScrollInverter.shared.consumeZoom(event, direction: direction)
+                ? nil : Unmanaged.passUnretained(event)
         }
 
         // The head tap swallows the tick before the inverter's tail tap can
